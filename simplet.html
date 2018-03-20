@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Refuge</title>
+    <meta http-equiv="Content-Type" contents="text/html" ; charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="Page2.css" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootbox.js/4.4.0/bootbox.min.js"></script>
+    <link rel="shortcut icon" href="favicon.ico" type="image/png">
+</head>
+
+<body>
+
+    <script type="text/javascript">
+
+        var uid;
+        var jsonDoc;
+        var uname;
+
+        function statusChangeCallback(response) {
+          console.log('statusChangeCallback');
+          if (response.status === 'connected') {
+            console.log("in this shit");
+                console.log(response);
+                FB.api('/'+uid, function(response) {
+                                    console.log(response);
+
+                  uname=response.name;
+                  console.log(uname);
+                });
+          } else {
+            console.log("not in. in else")
+            }
+        }
+
+
+        function checkLoginState() {
+            console.log("in checkLoginState");
+            FB.getLoginStatus(function(response) {
+                if(response.status!="connected")
+                {
+                    document.getElementById("puthere").innerHTML="";
+                    document.getElementById("confirmedActivities").innerHTML = "";
+
+                }
+              console.log("checkLoginState");
+              statusChangeCallback(response);
+            });
+        }
+
+        window.fbAsyncInit = function() {
+            FB.init({
+              appId      : '184394265504722',
+              cookie     : true,  
+              xfbml      : true,  
+              version    : 'v2.8' 
+            });
+
+            friendList();
+
+            FB.getLoginStatus(function(response) {
+              statusChangeCallback(response);
+                          console.log("getLoginStatus");
+
+            });
+
+        };
+
+        (function(d, s, id) {
+            var js, fjs = d.getElementsByTagName(s)[0];
+            if (d.getElementById(id)) return;
+            js = d.createElement(s); js.id = id;
+            js.src = "https://connect.facebook.net/en_US/sdk.js";
+            fjs.parentNode.insertBefore(js, fjs);
+          }(document, 'script', 'facebook-jssdk'));
+
+        function checkloginstatus()
+              {
+                FB.getLoginStatus(function(response) {
+                if (response.status === 'connected') {
+                  console.log("connected ante");
+                    uid = response.authResponse.userID;
+                  var accessToken = response.authResponse.accessToken;
+                } else if (response.status === 'not_authorized') {
+                      event.preventDefault();
+                      $(".overlay").fadeToggle("fast");
+                } else {
+                  // the user isn't logged in to Facebook.
+                  console.log("illi idini");
+                  $(".overlay").fadeToggle("fast");
+                }
+               });
+              }
+
+
+
+        function friendList() {
+            var accessToken;
+            console.log("in frieds list");
+            FB.getLoginStatus(function (response) {
+                if (response.status === 'connected') {
+                    console.log("inside connected");
+                    console.log(response);
+                    uid = response.authResponse.userID;
+                    accessToken = response.authResponse.accessToken;
+                    console.log(typeof (accessToken));
+                    console.log("Welcome " + uid);
+                    var request = "/" + uid + "/friends"
+                    console.log("request is" + request);
+                    FB.api( 
+                        "/app/permissions", 
+                        function (response) { 
+                            if (response && !response.error) {
+                                    console.log("permission access is " + response);
+                                } 
+                                else {
+                                console.log("access error " + response);
+                                } 
+                            }
+                           
+                        );
+
+                    FB.login(function (response) {
+                        FB.api(
+                            request,
+                            function (response) {
+                                console.log(response["data"]);
+                                jsonDoc = response;
+                                //generateFriendsTable(response);
+                            }
+                        );
+                    }, {
+                        scope: 'user_friends',
+                        auth_type: 'rerequest'
+                    });
+
+                } else if (response.status === 'not_authorized') {
+
+                } else {
+                    alert("Login to continue");
+                    document.getElementById("puthere").innerHTML="";
+                    document.getElementById("confirmedActivities").innerHTML = "";
+
+                }
+            });
+        }
+
+        function generateFriendsTable(jsonDoc) {
+            var numFriends = jsonDoc.data.length;
+            console.log("Number of friends found is " + numFriends);
+            var friendsDetails = "<form id='activityDetails' action='server.php' method='POST'>";
+            friendsDetails += "<div style='padding-top: 20px; padding-bottom:30px;'><table>";
+            for (var i = 0; i < numFriends; i++) {
+                friendsDetails += "<tr><td style ='width: 200px'>" + jsonDoc.data[i].name +
+                    "</td><td style='width:50px'><input type='checkbox' name='selectFriend[]' value='" + jsonDoc.data[i]
+                    .id + "'></td></tr>";
+            }
+            friendsDetails += "</table></div>";
+            friendsDetails += "<p class='activityHeading'>Activity Details</p>";
+            friendsDetails +=
+                "<label for='activityName'>What? </label><input type='text' name = 'activityName' id='activityName' required><br>";
+            friendsDetails += "<label for='place'>Where?</label><input type='text' name = 'place' id='place'>";
+            friendsDetails += "<label for='time'>When?</label><input type='date' name = 'time' id='time'><br><br>";
+            friendsDetails += "<input type='hidden' name='uid' id='uid' value=" + uid + ">";
+            friendsDetails += "<input type='submit' name='submitbutton' id='submitbutton'  value='Send'>";
+            friendsDetails += "<input type='reset' id='clear' value='Clear'>";
+
+            friendsDetails += "</form>";
+            document.getElementById("pickFriends").innerHTML = friendsDetails;
+        }
+
+        function addnewactivity() {
+            document.getElementById("puthere").innerHTML = "";
+            document.getElementById("confirmedActivities").innerHTML = "";
+
+            
+
+            var str =
+                "<div class='refugeHeading'><p class='activityHeading'>Add Activity</p><p>Pick Friends to send activity request</p></div><div id='pickFriends'></div>";
+            document.getElementById("puthere").innerHTML = str;
+            generateFriendsTable(jsonDoc);
+            console.log("here");
+
+        }
+
+        var flag=true;
+        function togglerightsidebar(){
+            if(flag){
+              flag=false;
+              str="<div class='vertical-menu' id='rightsidebar'><a href='javascript:void(0)'>Help</a><a href='javascript:void(0)'>Download</a><a href='javascript:void(0)' onclick = 'facebooklogout()'>Log-out</a></div>";
+              document.getElementById('rightbar').innerHTML = str;
+            }
+            else {
+              flag=true;
+              document.getElementById('rightbar').innerHTML = "";
+            }
+        }
+
+        function getname()
+        {
+
+            var obj = arguments[0];
+            var username;
+            (async () => {
+            await FB.api('/'+obj, function(response) {username=response.name;});
+
+            username = response;
+        });
+
+        }
+
+        $(document).ready(function(){
+                $("#viewActivities").click(function(){
+                    $.ajax({
+                        type: "POST",
+                        url: "server.php",
+                        data:{
+                            'viewActivities': $(this).val(),
+                            'unid': uid
+                        },
+                        success:function(result){
+                            var jsonResult = JSON.parse(result);
+                            console.log(jsonResult);
+                            var numActivities = jsonResult.length;
+                            var activitiesData = "<table>";
+                            for(var i=0; i<numActivities; i++){
+                                activitiesData += "<tr><td>" + jsonResult[i].name + "</td><td>" + jsonResult[i].date + "</td><td>" 
+                                    + jsonResult[i].location + "</td>";
+                                var numFriends = jsonResult[i].friends.length;
+                                activitiesData += "<td><ul>"
+                                for(var j=0; j<numFriends; j++){
+                                    activitiesData += "<li>" + getname(jsonResult[i].friends[j]) + "</li>";
+                                }
+                                activitiesData += "</ul></td>";
+                                activitiesData += "<td id='"+jsonResult[i].id+
+                                            "'><button type='button' id='confirmActivity' name='confirmActivity' onclick='confirmAct(this)';>Confirm</button></td>";
+                            }
+                            console.log(activitiesData);
+                            document.getElementById("confirmedActivities").innerHTML ="";
+                            document.getElementById("puthere").innerHTML = activitiesData;
+                        },
+                        error:function(result){
+                            console.log("Ajax error" + result.responseText);
+                        }
+                    });
+                });
+
+                $("#viewConfirmed").click(function(){
+                    $.ajax({
+                        type: "POST",
+                        url: "server.php",
+                        data:{
+                            'viewConfirmed': $(this).val(),
+                            'unid': uid
+                        },
+                        success:function(result){
+                            document.getElementById("puthere").innerHTML="";
+                            var jsonResult = JSON.parse(result);
+                            console.log(jsonResult);
+                            var numActivities = jsonResult.length;
+                            var activitiesData = "<table>";
+                            for(var i=0; i<numActivities; i++){
+                                activitiesData += "<tr><td>" + jsonResult[i].name + "</td><td>" + jsonResult[i].date + "</td><td>" 
+                                    + jsonResult[i].location + "</td>";
+                                var numFriends = jsonResult[i].friends.length;
+                                activitiesData += "<td><ul>"
+                                for(var j=0; j<numFriends; j++){
+                                    var sizen = jsonDoc.data.length;
+                                    var f = true;
+                                    var fname;
+                                    for(var k=0;f &&k<sizen;k++)
+                                    {
+                                        console.log(jsonDoc.data[k].id+"==="+jsonResult[i].friends[j]);
+
+                                        if(jsonDoc.data[k].id===jsonResult[i].friends[j])
+                                        {
+                                            fname = jsonDoc.data[k].name;
+                                            f = false;
+                                        }
+                                        else if(jsonResult[i].friends[j]===uid)
+                                        {
+                                            fname = uname;
+                                            f = false;
+
+                                        }
+                                    }
+                                    activitiesData += "<li>" + fname + "</li>";
+                                }
+                                activitiesData += "</ul></td>";
+                            }
+                            console.log(activitiesData);
+                            document.getElementById("confirmedActivities").innerHTML = activitiesData;
+                        },
+                        error:function(result){
+                            console.log("Ajax error" + result.responseText);
+                        }
+                    });
+                });
+            });
+            
+            function confirmAct(activity){
+                $.ajax({
+                    type: "POST",
+                    url: "server.php",
+                    data:{
+                        'confirmActivity' : 'confirmed',
+                        'activity_id' : activity.parentNode.id,
+                        'unid': uid
+                    },
+                    success: function(result){
+                        console.log("confirm activity successful " + result);
+                        activity.parentNode.innerHTML = "Confirmed this activity";
+                    },
+                    error:function(result){
+                        console.log("confirm activity request error" + result.responseText);
+                    }
+                });
+            }
+    </script>
+
+    <nav class="navbar navbar-inverse" style="padding-bottom: 0px; margin-bottom: 0px">
+      <div class="container-fluid" style="padding-bottom: 0px; margin-bottom: 0px">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="#" style="padding-left: 60px">
+            <img src="favicon.ico" style="width: 16px; height: 16px;float: left;">
+            <div style="margin-left: 16px;padding-left: 7px;font-size: 20px;color: white">refuge</div>
+          </a>
+        </div>
+        <ul class="nav navbar-nav navbar-right">
+          <li><a href="#" ><span class="glyphicon glyphicon-log-in"></span> Login</a></li>
+          <li style="padding-right:50px"><a href="#" onclick="togglerightsidebar()"><span class="glyphicon glyphicon-align-justify"></span></a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <div id="fb-root"></div>
+    <div class="fb-login-button" data-max-rows="1" data-size="large" data-button-type="continue_with" data-show-faces="false"
+        data-auto-logout-link="true" data-use-continue-as="false" onlogin="checkLoginState()">
+    </div>
+
+    <div>
+        <button type="submit" name="addNewActivity" value="" onclick="addnewactivity()">Add a new Activity</button>
+        <button type="button" id="viewActivities" name="viewActivities">View Pending Activity Requests</button>
+        <button type="button" id="viewConfirmed" name="viewConfirmed">View Confirmed Activities</button>
+        <input type='hidden' name='unid' id='unid' value="">
+    </div>
+
+    <div id="puthere">
+    </div>
+
+    <div id="confirmedActivities">
+    </div>
+
+
+
+</body>
+
+</html>
